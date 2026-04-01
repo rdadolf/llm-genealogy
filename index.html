@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Transformer Family Tree</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0e0e11;
+  --bg2: #16161b;
+  --bg3: #1e1e25;
+  --text: #e2e0d8;
+  --text2: #9a9890;
+  --text3: #5e5d58;
+  --border: rgba(255,255,255,0.06);
+
+  --c-encdec:  #888780;
+  --c-encoder: #5DCAA5;
+  --c-dense:   #7BA3E0;
+  --c-moe:     #E8764B;
+  --c-unknown: #A8919A;
+  --c-scaling: #3CB88A;
+
+  --bg-encdec:  rgba(136,135,128,0.12);
+  --bg-encoder: rgba(93,202,165,0.10);
+  --bg-dense:   rgba(123,163,224,0.10);
+  --bg-moe:     rgba(232,118,75,0.10);
+  --bg-unknown: rgba(168,145,154,0.09);
+  --bg-scaling: rgba(60,184,138,0.10);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'DM Sans', system-ui, sans-serif;
+  overflow-x: auto;
+}
+
+.page-header {
+  position: sticky;
+  top: 0;
+  left: 0;
+  z-index: 100;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+  padding: 20px 32px 16px;
+}
+
+.page-header h1 {
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  margin-bottom: 10px;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  font-size: 12px;
+  color: var(--text2);
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.legend-line {
+  width: 20px;
+  height: 3px;
+  border-radius: 2px;
+}
+
+.canvas-container {
+  position: relative;
+  overflow: auto;
+  padding-bottom: 60px;
+}
+
+svg.dag { display: block; }
+
+.year-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 12px;
+  fill: var(--text3);
+  font-weight: 500;
+}
+
+.year-line {
+  stroke: var(--border);
+  stroke-width: 1;
+}
+
+.edge {
+  fill: none;
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: opacity 0.25s, stroke-width 0.25s;
+}
+
+.edge.faded { opacity: 0.04; }
+.edge.highlighted { stroke-width: 3.5; opacity: 1; }
+
+.node-group { cursor: pointer; }
+.node-group:hover .node-bg { filter: brightness(1.2); }
+
+.node-bg {
+  rx: 6; ry: 6;
+  stroke-width: 1;
+  transition: filter 0.15s, stroke-width 0.15s;
+}
+
+.node-group.active .node-bg { stroke-width: 2.5; filter: brightness(1.3); }
+.node-group.parent-hl .node-bg { stroke-width: 2; filter: brightness(1.15); }
+.node-group.child-hl .node-bg { stroke-width: 2; filter: brightness(1.15); }
+.node-group.faded { opacity: 0.15; }
+
+.node-name {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  fill: var(--text);
+}
+
+.node-sub {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 10.5px;
+  fill: var(--text2);
+}
+
+.arch-tag {
+  font-family: 'DM Mono', monospace;
+  font-size: 8.5px;
+  font-weight: 500;
+  dominant-baseline: central;
+}
+
+.detail-panel {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--bg2);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 12px;
+  padding: 14px 18px;
+  max-width: 540px;
+  width: 90%;
+  z-index: 200;
+  display: none;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.5);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.detail-panel.show { display: block; }
+
+.detail-panel h3 {
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 2px;
+  letter-spacing: -0.01em;
+}
+
+.detail-panel .meta {
+  font-size: 11px;
+  color: var(--text2);
+  margin-bottom: 6px;
+}
+
+.detail-panel .desc {
+  color: var(--text2);
+  font-size: 12.5px;
+}
+
+.detail-panel .lineage {
+  margin-top: 8px;
+  font-size: 11px;
+  color: var(--text3);
+}
+
+.detail-panel .lineage span {
+  color: var(--c-dense);
+  cursor: pointer;
+}
+
+.detail-panel .lineage span:hover { text-decoration: underline; }
+
+.close-btn {
+  position: absolute;
+  top: 10px; right: 12px;
+  background: none; border: none;
+  color: var(--text3);
+  cursor: pointer;
+  font-size: 16px; line-height: 1; padding: 4px;
+}
+
+.close-btn:hover { color: var(--text); }
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <h1>The transformer family tree</h1>
+  <div class="legend">
+    <div class="legend-item"><div class="legend-line" style="background:var(--c-encdec)"></div>Encoder-decoder</div>
+    <div class="legend-item"><div class="legend-line" style="background:var(--c-encoder)"></div>Encoder-only</div>
+    <div class="legend-item"><div class="legend-line" style="background:var(--c-dense)"></div>Decoder, dense</div>
+    <div class="legend-item"><div class="legend-line" style="background:var(--c-moe)"></div>Decoder, MoE</div>
+    <div class="legend-item"><div class="legend-line" style="background:var(--c-unknown)"></div>Decoder, undisclosed</div>
+    <div class="legend-item"><div class="legend-line" style="background:var(--c-scaling)"></div>Scaling research</div>
+  </div>
+</div>
+
+<div class="canvas-container">
+  <svg class="dag" id="dag"></svg>
+</div>
+
+<div class="detail-panel" id="detail">
+  <button class="close-btn" onclick="clearSelection()">&times;</button>
+  <div id="detail-content"></div>
+</div>
+
+<script>
+const NW = 156, NH = 56, CGAP = 40, RGAP = 72, LPAD = 110, TPAD = 30;
+
+const famColor = {
+  'enc-dec': 'var(--c-encdec)',
+  'encoder': 'var(--c-encoder)',
+  'dense':   'var(--c-dense)',
+  'moe':     'var(--c-moe)',
+  'unknown': 'var(--c-unknown)',
+  'scaling': 'var(--c-scaling)',
+};
+
+const famBg = {
+  'enc-dec': 'var(--bg-encdec)',
+  'encoder': 'var(--bg-encoder)',
+  'dense':   'var(--bg-dense)',
+  'moe':     'var(--bg-moe)',
+  'unknown': 'var(--bg-unknown)',
+  'scaling': 'var(--bg-scaling)',
+};
+
+const famLabel = {
+  'enc-dec': 'enc-dec',
+  'encoder': 'encoder',
+  'dense':   'dense',
+  'moe':     'MoE',
+  'unknown': 'undisclosed',
+  'scaling': 'research',
+};
+
+// Columns (0-indexed):
+// 0: BERT  1: T5  2: Google/Gemini  3: OpenAI main  4: OpenAI chat/reasoning  5: Anthropic  6: Meta  7: Mistral  8: Qwen  9: DeepSeek
+
+const models = [
+  // Row 0 — 2017
+  { id:"transformer", name:"Transformer", sub:"Google · 2017", fam:"enc-dec", col:3, row:0,
+    desc:"The foundational architecture from \"Attention is all you need.\" Introduced self-attention as a replacement for recurrence. Every model on this tree descends from this paper.",
+    parents:[] },
+
+  // Row 1 — 2018
+  { id:"bert", name:"BERT", sub:"Google · 2018", fam:"encoder", col:0, row:1,
+    desc:"Bidirectional encoder. Dominated NLP benchmarks, powered Google Search for years. Spawned RoBERTa, ALBERT, DistilBERT. A separate branch — encoder-only, not generative.",
+    parents:["transformer"] },
+  { id:"gpt1", name:"GPT-1", sub:"OpenAI · 2018", fam:"dense", col:3, row:1,
+    desc:"First decoder-only transformer pretrained then fine-tuned. Established the generative pretraining paradigm. 117M parameters, dense.",
+    parents:["transformer"] },
+
+  // Row 2 — 2019
+  { id:"t5", name:"T5", sub:"Google · 2019", fam:"enc-dec", col:1, row:2,
+    desc:"\"Text-to-Text Transfer Transformer\" — recast all NLP as text generation. The encoder-decoder lineage's last major moment before decoder-only dominated.",
+    parents:["transformer"] },
+  { id:"gpt2", name:"GPT-2", sub:"OpenAI · 2019", fam:"dense", col:3, row:2,
+    desc:"1.5B dense params. Emergent zero-shot capabilities. Initially withheld over misuse concerns — the first AI release-norms debate.",
+    parents:["gpt1"] },
+
+  // Row 3 — 2020
+  { id:"gpt3", name:"GPT-3", sub:"OpenAI · 2020", fam:"dense", col:3, row:3,
+    desc:"175B dense parameters. Few-shot learning from prompt examples. Convinced the field scaling laws were real. Created LLM-as-a-service.",
+    parents:["gpt2"] },
+
+  // Row 4 — 2022
+  { id:"chinchilla", name:"Chinchilla", sub:"DeepMind · 2022", fam:"scaling", col:1, row:4,
+    desc:"70B dense model that beat 280B Gopher by training on 4x more data. Established the Chinchilla scaling laws — most models were undertrained. Reshaped every subsequent compute budget.",
+    parents:["gpt3"] },
+  { id:"palm", name:"PaLM", sub:"Google · 2022", fam:"dense", col:2, row:4,
+    desc:"540B dense parameters across thousands of TPUs. Breakthrough chain-of-thought reasoning. Later became the foundation for Gemini.",
+    parents:["t5","gpt3"] },
+  { id:"instructgpt", name:"InstructGPT", sub:"OpenAI · 2022", fam:"dense", col:3, row:4,
+    desc:"Applied RLHF to GPT-3. A small aligned model beat raw GPT-3 at 100x the size. Made ChatGPT possible.",
+    parents:["gpt3"] },
+  { id:"chatgpt", name:"ChatGPT", sub:"OpenAI · 2022", fam:"dense", col:4, row:4,
+    desc:"RLHF-tuned GPT-3.5 for dialogue. Fastest-growing consumer product in history. Made LLMs mainstream overnight.",
+    parents:["instructgpt"] },
+
+  // Row 5 — early 2023
+  { id:"gpt4", name:"GPT-4", sub:"OpenAI · 2023", fam:"unknown", col:4, row:5,
+    desc:"Multimodal (text + images), SOTA across nearly every benchmark. Architecture undisclosed — widely rumored to be MoE (8 experts, ~220B each) but never confirmed. Passed the bar exam.",
+    parents:["chatgpt"] },
+  { id:"claude1", name:"Claude 1", sub:"Anthropic · 2023", fam:"unknown", col:5, row:5,
+    desc:"Built with Constitutional AI — the model critiques its own outputs against principles. Architecture undisclosed. Emphasized safety and helpfulness as co-equal goals.",
+    parents:["instructgpt"] },
+  { id:"llama1", name:"LLaMA", sub:"Meta · 2023", fam:"dense", col:6, row:5,
+    desc:"Open-weight dense models (7B–65B) applying Chinchilla insights. Weights leaked, igniting the open-source ecosystem. The most impactful release for democratizing LLM access.",
+    parents:["chinchilla"] },
+  { id:"gemini", name:"Gemini 1.0", sub:"Google · 2023", fam:"unknown", col:2, row:5,
+    desc:"Unified multimodal successor to PaLM. Natively trained on text, images, audio, video. Architecture undisclosed but believed to use MoE.",
+    parents:["palm"] },
+
+  // Row 6 — late 2023
+  { id:"llama2", name:"Llama 2", sub:"Meta · 2023", fam:"dense", col:6, row:6,
+    desc:"Official open-weight dense models with permissive license. RLHF chat variants. The de facto base for fine-tuning — thousands of derivatives.",
+    parents:["llama1"] },
+  { id:"mistral7b", name:"Mistral 7B", sub:"Mistral · 2023", fam:"dense", col:7, row:6,
+    desc:"7B dense model that beat Llama 2 13B. Sliding-window attention, grouped-query attention. Proved architecture innovation beats parameter count.",
+    parents:["llama1"] },
+  { id:"claude2", name:"Claude 2", sub:"Anthropic · 2023", fam:"unknown", col:5, row:6,
+    desc:"100K token context — 10x competitors. Architecture undisclosed. Extended context became an Anthropic signature.",
+    parents:["claude1"] },
+  { id:"qwen1", name:"Qwen", sub:"Alibaba · 2023", fam:"dense", col:8, row:6,
+    desc:"Open-weight dense (7B–72B). Strong multilingual, especially Chinese. Established Alibaba as a serious player in the open ecosystem.",
+    parents:["llama1"] },
+
+  // Row 7 — early-mid 2024
+  { id:"mixtral", name:"Mixtral 8x7B", sub:"Mistral · 2023", fam:"moe", col:7, row:7,
+    desc:"Open-weight MoE — 47B total, activates ~13B per token (2 of 8 experts). Near GPT-3.5 quality at a fraction of inference cost. Made MoE practical and accessible.",
+    parents:["mistral7b"] },
+  { id:"claude3", name:"Claude 3", sub:"Anthropic · 2024", fam:"unknown", col:5, row:7,
+    desc:"Tiered family (Haiku, Sonnet, Opus). Opus competed with GPT-4. Introduced the tiered model approach. Added vision. Architecture undisclosed.",
+    parents:["claude2"] },
+  { id:"llama3", name:"Llama 3", sub:"Meta · 2024", fam:"dense", col:6, row:7,
+    desc:"Dense, 15T tokens. 70B rivaled closed models. 405B became the largest-ever open dense model, closing the gap with proprietary frontier.",
+    parents:["llama2"] },
+  { id:"gpt4o", name:"GPT-4o", sub:"OpenAI · 2024", fam:"unknown", col:4, row:7,
+    desc:"\"Omni\" — native multimodal I/O (text, audio, images). Faster and cheaper. Architecture undisclosed.",
+    parents:["gpt4"] },
+  { id:"gemini15", name:"Gemini 1.5", sub:"Google · 2024", fam:"moe", col:2, row:7,
+    desc:"1M+ token context window. Confirmed MoE architecture. Pushed context from 100K to 1M+. Enabled processing entire codebases.",
+    parents:["gemini"] },
+  { id:"qwen2", name:"Qwen 2.5", sub:"Alibaba · 2024", fam:"dense", col:8, row:7,
+    desc:"Frontier-competitive open dense weights. 72B matched Llama 3 70B. Strong code and math. One of the most-used base models globally.",
+    parents:["qwen1"] },
+  { id:"deepseekv2", name:"DeepSeek-V2", sub:"DeepSeek · 2024", fam:"moe", col:9, row:7,
+    desc:"236B MoE (21B active) with novel Multi-head Latent Attention (MLA) — slashed KV-cache memory. Made MoE even more efficient.",
+    parents:["mixtral","qwen1"] },
+
+  // Row 8 — late 2024
+  { id:"mistral-lg", name:"Mistral Large", sub:"Mistral · 2024", fam:"unknown", col:7, row:8,
+    desc:"Proprietary frontier model. Architecture undisclosed. Signaled Mistral's pivot to dual open/commercial strategy.",
+    parents:["mixtral"] },
+  { id:"o1", name:"o1", sub:"OpenAI · 2024", fam:"unknown", col:3, row:8,
+    desc:"\"Reasoning\" model — extended chain-of-thought at inference. Pioneered test-time compute scaling: a new improvement axis beyond pretraining scale. Architecture undisclosed.",
+    parents:["gpt4o"] },
+  { id:"claude35s", name:"Claude 3.5 Sonnet", sub:"Anthropic · 2024", fam:"unknown", col:5, row:8,
+    desc:"Mid-tier that outperformed previous flagship Opus at lower cost. One of the most widely used production models. Architecture undisclosed.",
+    parents:["claude3"] },
+
+  // Row 9 — 2025
+  { id:"deepseekr1", name:"DeepSeek-R1", sub:"DeepSeek · 2025", fam:"moe", col:9, row:9,
+    desc:"Open-weight MoE reasoning model (671B total, 37B active) competitive with o1. Trained with large-scale RL. Open release shocked the industry.",
+    parents:["deepseekv2","o1"] },
+  { id:"claude4", name:"Claude 4", sub:"Anthropic · 2025", fam:"unknown", col:5, row:9,
+    desc:"Current flagship — Opus and Sonnet. Continued advances in reasoning, coding, and agentic capabilities. Architecture undisclosed.",
+    parents:["claude35s"] },
+  { id:"gpt45", name:"GPT-4.5", sub:"OpenAI · 2025", fam:"unknown", col:4, row:9,
+    desc:"Largest dense pretrained model from OpenAI (per their claim). Improved world knowledge, reduced hallucination. If truly dense, one of the last major dense frontier models.",
+    parents:["gpt4o"] },
+  { id:"llama4", name:"Llama 4", sub:"Meta · 2025", fam:"moe", col:6, row:9,
+    desc:"Meta's first MoE — Scout (17B active / 109B total) and Maverick (17B active / 400B total). A landmark: Meta, the flagship of dense open-weight, switched to MoE.",
+    parents:["llama3"] },
+  { id:"gemini25", name:"Gemini 2.5", sub:"Google · 2025", fam:"moe", col:2, row:9,
+    desc:"Natively multimodal thinking model. MoE architecture. Convergence of the PaLM lineage with test-time reasoning approaches.",
+    parents:["gemini15"] },
+  { id:"qwen3", name:"Qwen 3", sub:"Alibaba · 2025", fam:"moe", col:8, row:9,
+    desc:"Hybrid thinking with fast + extended reasoning. MoE variants up to 235B. The largest Qwen models moved from dense to MoE.",
+    parents:["qwen2"] },
+];
+
+const byId = {};
+models.forEach(m => byId[m.id] = m);
+
+function nodeX(col) { return LPAD + col * (NW + CGAP); }
+function nodeY(row) { return TPAD + row * (NH + RGAP); }
+function nodeCX(col) { return nodeX(col) + NW / 2; }
+
+const maxCol = Math.max(...models.map(m => m.col));
+const maxRow = Math.max(...models.map(m => m.row));
+const svgW = LPAD + (maxCol + 1) * (NW + CGAP) + 60;
+const svgH = TPAD + (maxRow + 1) * (NH + RGAP) + 60;
+
+const yearLabels = {
+  0: "2017", 1: "2018", 2: "2019", 3: "2020", 4: "2022",
+  5: "2023", 6: "", 7: "2024", 8: "", 9: "2025"
+};
+
+const svg = document.getElementById('dag');
+svg.setAttribute('width', svgW);
+svg.setAttribute('height', svgH);
+svg.setAttribute('viewBox', `0 0 ${svgW} ${svgH}`);
+
+// Arrow marker defs - filled triangles for clean alignment
+const defs = document.createElementNS('http://www.w3.org/2000/svg','defs');
+const colorMap = {
+  'enc-dec':'#888780','encoder':'#5DCAA5','dense':'#7BA3E0',
+  'moe':'#E8764B','unknown':'#A8919A','scaling':'#3CB88A'
+};
+Object.entries(colorMap).forEach(([fam, hex]) => {
+  const marker = document.createElementNS('http://www.w3.org/2000/svg','marker');
+  marker.setAttribute('id', `arrow-${fam}`);
+  marker.setAttribute('viewBox','0 0 10 10');
+  marker.setAttribute('refX','10');
+  marker.setAttribute('refY','5');
+  marker.setAttribute('markerWidth','6');
+  marker.setAttribute('markerHeight','6');
+  marker.setAttribute('orient','auto');
+  const mp = document.createElementNS('http://www.w3.org/2000/svg','polygon');
+  mp.setAttribute('points','1,1.5 10,5 1,8.5');
+  mp.setAttribute('fill', hex);
+  marker.appendChild(mp);
+  defs.appendChild(marker);
+
+  // Highlighted version
+  const marker2 = document.createElementNS('http://www.w3.org/2000/svg','marker');
+  marker2.setAttribute('id', `arrow-${fam}-hl`);
+  marker2.setAttribute('viewBox','0 0 10 10');
+  marker2.setAttribute('refX','10');
+  marker2.setAttribute('refY','5');
+  marker2.setAttribute('markerWidth','7');
+  marker2.setAttribute('markerHeight','7');
+  marker2.setAttribute('orient','auto');
+  const mp2 = document.createElementNS('http://www.w3.org/2000/svg','polygon');
+  mp2.setAttribute('points','1,1.5 10,5 1,8.5');
+  mp2.setAttribute('fill', hex);
+  marker2.appendChild(mp2);
+  defs.appendChild(marker2);
+});
+svg.appendChild(defs);
+
+// Year lines
+Object.entries(yearLabels).forEach(([row, label]) => {
+  if (!label) return;
+  const y = nodeY(Number(row)) + NH / 2;
+  const line = document.createElementNS('http://www.w3.org/2000/svg','line');
+  line.setAttribute('x1', 0); line.setAttribute('y1', y);
+  line.setAttribute('x2', svgW); line.setAttribute('y2', y);
+  line.setAttribute('class', 'year-line');
+  svg.appendChild(line);
+  const text = document.createElementNS('http://www.w3.org/2000/svg','text');
+  text.setAttribute('x', 14); text.setAttribute('y', y - 8);
+  text.setAttribute('class', 'year-label');
+  text.textContent = label;
+  svg.appendChild(text);
+});
+
+// Build bounding boxes for collision detection (with 6px margin)
+const allBoxes = models.map(m => ({
+  id: m.id, col: m.col, row: m.row,
+  x: nodeX(m.col) - 6, y: nodeY(m.row) - 6,
+  x2: nodeX(m.col) + NW + 6, y2: nodeY(m.row) + NH + 6,
+}));
+
+// Check if a horizontal segment at jogY between x-coords left..right crosses any box
+function horizHitsBox(left, right, jogY, excludeIds) {
+  if (left > right) [left, right] = [right, left];
+  return allBoxes.some(b => {
+    if (excludeIds.includes(b.id)) return false;
+    return jogY > b.y && jogY < b.y2 && right > b.x && left < b.x2;
+  });
+}
+
+// Edge routing
+const edgeGroup = document.createElementNS('http://www.w3.org/2000/svg','g');
+svg.appendChild(edgeGroup);
+const edgeElements = [];
+
+models.forEach(m => {
+  m.parents.forEach(pid => {
+    const p = byId[pid];
+    if (!p) return;
+
+    const hex = colorMap[p.fam] || '#888780';
+    const path = document.createElementNS('http://www.w3.org/2000/svg','path');
+    path.setAttribute('stroke', hex);
+    path.setAttribute('class', 'edge');
+    path.setAttribute('opacity', '0.4');
+    path.setAttribute('marker-end', `url(#arrow-${p.fam})`);
+    path.dataset.from = pid;
+    path.dataset.to = m.id;
+    path.dataset.fam = p.fam;
+
+    const x1 = nodeCX(p.col);
+    const y1bot = nodeY(p.row) + NH;
+    const x2 = nodeCX(m.col);
+    const y2top = nodeY(m.row);
+    const rowDiff = m.row - p.row;
+    const colDiff = m.col - p.col;
+    const exclude = [p.id, m.id];
+    const r = 14; // corner radius for L-bends
+    const dir = colDiff > 0 ? 1 : -1;
+    const APPROACH = 22; // straight vertical approach distance before target
+
+    if (p.col === m.col) {
+      // === CASE 1: Same column — straight vertical line ===
+      path.setAttribute('d', `M${x1} ${y1bot} L${x2} ${y2top}`);
+
+    } else if (rowDiff === 0) {
+      // === CASE 2: Same row — exit side of parent, route to side of child ===
+      const exitX = colDiff > 0 ? nodeX(p.col) + NW : nodeX(p.col);
+      const enterX = colDiff > 0 ? nodeX(m.col) : nodeX(m.col) + NW;
+      const midY = nodeY(p.row) + NH * 0.5;
+
+      if (!horizHitsBox(exitX, enterX, midY, exclude)) {
+        path.setAttribute('d', `M${exitX} ${midY} L${enterX} ${midY}`);
+      } else {
+        const safeY = nodeY(p.row) + NH + 40;
+        path.setAttribute('d', [
+          `M${x1} ${y1bot}`,
+          `L${x1} ${safeY - r}`,
+          `Q${x1} ${safeY} ${x1 + r * dir} ${safeY}`,
+          `L${x2 - r * dir} ${safeY}`,
+          `Q${x2} ${safeY} ${x2} ${safeY - r}`,
+          `L${x2} ${nodeY(m.row) + NH}`,
+        ].join(' '));
+      }
+
+    } else {
+      // === CASE 3: Different rows, different columns ===
+      const gapY = y2top - y1bot;
+      // Landing point: the S-curve or L-bend delivers to (x2, y2top - APPROACH),
+      // then a straight vertical L segment covers the last APPROACH px into the node.
+      const yLand = y2top - APPROACH;
+
+      if (Math.abs(colDiff) <= 1) {
+        // Short hop — S-curve ending at yLand, then straight vertical to y2top
+        const cy1 = y1bot + (yLand - y1bot) * 0.45;
+        const cy2 = yLand - (yLand - y1bot) * 0.45;
+        path.setAttribute('d', [
+          `M${x1} ${y1bot}`,
+          `C${x1} ${cy1} ${x2} ${cy2} ${x2} ${yLand}`,
+          `L${x2} ${y2top}`,
+        ].join(' '));
+      } else {
+        // Long hop — L-bend routing: down → horizontal jog → down
+        let jogY = y1bot + gapY * 0.45;
+        let jogSafe = !horizHitsBox(x1, x2, jogY, exclude);
+
+        if (!jogSafe) {
+          jogY = y1bot + 16;
+          jogSafe = !horizHitsBox(x1, x2, jogY, exclude);
+        }
+        if (!jogSafe) {
+          jogY = y2top - APPROACH - r - 16;
+          jogSafe = !horizHitsBox(x1, x2, jogY, exclude);
+        }
+        if (!jogSafe) {
+          jogY = y1bot + gapY * 0.8;
+        }
+
+        path.setAttribute('d', [
+          `M${x1} ${y1bot}`,
+          `L${x1} ${jogY - r}`,
+          `Q${x1} ${jogY} ${x1 + r * dir} ${jogY}`,
+          `L${x2 - r * dir} ${jogY}`,
+          `Q${x2} ${jogY} ${x2} ${jogY + r}`,
+          `L${x2} ${y2top}`,
+        ].join(' '));
+      }
+    }
+
+    edgeGroup.appendChild(path);
+    edgeElements.push(path);
+  });
+});
+
+// Draw nodes on top
+const nodeGroup = document.createElementNS('http://www.w3.org/2000/svg','g');
+svg.appendChild(nodeGroup);
+const nodeElements = {};
+
+models.forEach(m => {
+  const g = document.createElementNS('http://www.w3.org/2000/svg','g');
+  g.setAttribute('class', 'node-group');
+  g.dataset.id = m.id;
+
+  const x = nodeX(m.col);
+  const y = nodeY(m.row);
+  const hex = colorMap[m.fam];
+
+  const rect = document.createElementNS('http://www.w3.org/2000/svg','rect');
+  rect.setAttribute('x', x); rect.setAttribute('y', y);
+  rect.setAttribute('width', NW); rect.setAttribute('height', NH);
+  rect.setAttribute('fill', famBg[m.fam]);
+  rect.setAttribute('stroke', famColor[m.fam]);
+  rect.setAttribute('class', 'node-bg');
+  g.appendChild(rect);
+
+  const name = document.createElementNS('http://www.w3.org/2000/svg','text');
+  name.setAttribute('x', x + 10); name.setAttribute('y', y + 20);
+  name.setAttribute('class', 'node-name');
+  name.textContent = m.name;
+  g.appendChild(name);
+
+  const sub = document.createElementNS('http://www.w3.org/2000/svg','text');
+  sub.setAttribute('x', x + 10); sub.setAttribute('y', y + 34);
+  sub.setAttribute('class', 'node-sub');
+  sub.textContent = m.sub;
+  g.appendChild(sub);
+
+  // Architecture tag (small pill in bottom-right)
+  const tagLabel = famLabel[m.fam];
+  if (tagLabel) {
+    const tagW = tagLabel.length * 5.5 + 10;
+    const tagH = 14;
+    const tagX = x + NW - tagW - 6;
+    const tagY = y + NH - tagH - 5;
+
+    const tagRect = document.createElementNS('http://www.w3.org/2000/svg','rect');
+    tagRect.setAttribute('x', tagX); tagRect.setAttribute('y', tagY);
+    tagRect.setAttribute('width', tagW); tagRect.setAttribute('height', tagH);
+    tagRect.setAttribute('rx', 3);
+    tagRect.setAttribute('fill', hex);
+    tagRect.setAttribute('opacity', '0.2');
+    g.appendChild(tagRect);
+
+    const tagText = document.createElementNS('http://www.w3.org/2000/svg','text');
+    tagText.setAttribute('x', tagX + tagW / 2);
+    tagText.setAttribute('y', tagY + tagH / 2);
+    tagText.setAttribute('text-anchor', 'middle');
+    tagText.setAttribute('dominant-baseline', 'central');
+    tagText.setAttribute('class', 'arch-tag');
+    tagText.setAttribute('fill', hex);
+    tagText.textContent = tagLabel;
+    g.appendChild(tagText);
+  }
+
+  g.addEventListener('click', (e) => { e.stopPropagation(); selectModel(m.id); });
+  nodeGroup.appendChild(g);
+  nodeElements[m.id] = g;
+});
+
+// Interaction
+let activeId = null;
+const panel = document.getElementById('detail');
+const content = document.getElementById('detail-content');
+
+function clearSelection() {
+  activeId = null;
+  panel.classList.remove('show');
+  Object.values(nodeElements).forEach(n => {
+    n.classList.remove('active','parent-hl','child-hl','faded');
+  });
+  edgeElements.forEach(e => {
+    e.classList.remove('highlighted','faded');
+    e.setAttribute('opacity', '0.4');
+    const fam = e.dataset.fam;
+    e.setAttribute('marker-end', `url(#arrow-${fam})`);
+  });
+}
+
+function selectModel(id) {
+  if (activeId === id) { clearSelection(); return; }
+  clearSelection();
+  activeId = id;
+
+  const m = byId[id];
+  const parents = m.parents;
+  const children = models.filter(x => x.parents.includes(id)).map(x => x.id);
+
+  Object.entries(nodeElements).forEach(([nid, el]) => {
+    if (nid === id) el.classList.add('active');
+    else if (parents.includes(nid)) el.classList.add('parent-hl');
+    else if (children.includes(nid)) el.classList.add('child-hl');
+    else el.classList.add('faded');
+  });
+
+  edgeElements.forEach(e => {
+    const f = e.dataset.from, t = e.dataset.to, fam = e.dataset.fam;
+    if ((f === id && children.includes(t)) || (t === id && parents.includes(f))) {
+      e.classList.add('highlighted');
+      e.setAttribute('opacity', '1');
+      e.setAttribute('marker-end', `url(#arrow-${fam}-hl)`);
+    } else {
+      e.classList.add('faded');
+    }
+  });
+
+  const parentLinks = parents.map(pid => {
+    const p = byId[pid];
+    return p ? `<span onclick="selectModel('${pid}')">${p.name}</span>` : pid;
+  });
+  const childLinks = children.map(cid => {
+    const c = byId[cid];
+    return c ? `<span onclick="selectModel('${cid}')">${c.name}</span>` : cid;
+  });
+
+  let lineage = '';
+  if (parentLinks.length) lineage += `Builds on: ${parentLinks.join(', ')}`;
+  if (childLinks.length) lineage += `${parentLinks.length ? ' &middot; ' : ''}Influenced: ${childLinks.join(', ')}`;
+
+  content.innerHTML = `<h3>${m.name}</h3>
+    <div class="meta">${m.sub}</div>
+    <div class="desc">${m.desc}</div>
+    ${lineage ? `<div class="lineage">${lineage}</div>` : ''}`;
+  panel.classList.add('show');
+}
+
+svg.addEventListener('click', (e) => {
+  if (!e.target.closest('.node-group')) clearSelection();
+});
+</script>
+</body>
+</html>
